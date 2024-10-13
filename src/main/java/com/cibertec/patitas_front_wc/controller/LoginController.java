@@ -3,21 +3,26 @@ package com.cibertec.patitas_front_wc.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.cibertec.patitas_front_wc.dto.LoginRequestDTO;
 import com.cibertec.patitas_front_wc.dto.LoginResponseDTO;
 import com.cibertec.patitas_front_wc.view.LoginModel;
 
+import reactor.core.publisher.Mono;
+
 @Controller
 @RequestMapping("/login")
+@CrossOrigin(origins = "")
 public class LoginController {
     @Autowired
-    RestTemplate restTemplate;
+    WebClient clientAuth;
 
     @GetMapping("/inicio")
     public String inicio(Model model){
@@ -41,9 +46,15 @@ public class LoginController {
             return "inicio";
         } 
         try {
-            // Simulacion de llamada a la API de autenticacion
             LoginRequestDTO loginRequestDTO = new LoginRequestDTO(tipoDocumento, numeroDocumento, password);
-            LoginResponseDTO loginResponseDTO = restTemplate.postForObject("/login", loginRequestDTO, LoginResponseDTO.class);
+            Mono<LoginResponseDTO> monoLoginResponse = clientAuth.post()
+            .uri("/login")
+            .body(Mono.just(loginRequestDTO), LoginRequestDTO.class)
+            .retrieve()
+            .bodyToMono(LoginResponseDTO.class);
+
+            //Recuperar resultado del mono (sincrono o bloqueante)
+            LoginResponseDTO loginResponseDTO = monoLoginResponse.block();
 
             if (loginResponseDTO.codigo().equals("00")){
             LoginModel loginModel = new LoginModel("00", "", loginResponseDTO.usuario());
@@ -61,4 +72,6 @@ public class LoginController {
             return "inicio";}
         }
     }
+
+    
 
